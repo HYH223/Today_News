@@ -4,47 +4,48 @@ import java.util.ArrayList;
 
 public class Article_Class {
 
-	String Title; //제목
-	String Content; //내용
-	String Time; //개시 시간
-	String URL; //URL
-	String sid2; //Sid2
-	ArrayList<String> Keyword = new ArrayList<String>(); //Keyword //Expect to Modify
+	String Article_Title; //제목
+	String Article_Content; //내용
+	String Article_Time; //개시 시간
+	String Article_URL; //URL
+	String Article_Sidnum; //Sid1 Number
+	ArrayList<String> Article_Keyword = new ArrayList<String>(); //Keyword
 	
-	public String getURL() {
-		return URL;
+	public String getArticle_Title() {
+		return Article_Title;
 	}
-	public void setURL(String uRL) {
-		URL = uRL;
+	public void setArticle_Title(String article_Title) {
+		Article_Title = article_Title;
 	}
-	public String getTitle() {
-		return Title;
+	public String getArticle_Content() {
+		return Article_Content;
 	}
-	public void setTitle(String title) {
-		Title = title;
+	public void setArticle_Content(String article_Content) {
+		Article_Content = article_Content;
 	}
-	public String getContent() {
-		return Content;
+	public String getArticle_Time() {
+		return Article_Time;
 	}
-	public void setContent(String content) {
-		Content = content;
+	public void setArticle_Time(String article_Time) {
+		Article_Time = article_Time;
 	}
-	public String getTime() {
-		return Time;
+	public String getArticle_URL() {
+		return Article_URL;
 	}
-	public void setTime(String time) {
-		Time = time;
+	public void setArticle_URL(String article_URL) {
+		Article_URL = article_URL;
 	}
-	public String getSid2() {
-		return sid2;
+	public String getArticle_Sidnum() {
+		return Article_Sidnum;
 	}
-	public void setSid2(String sid2) {
-		this.sid2 = sid2;
+	public void setArticle_Sidnum(String article_Sidnum) {
+		Article_Sidnum = article_Sidnum;
 	}
-	public ArrayList<String> getKeyword() {
-		return Keyword;
+	public ArrayList<String> getArticle_Keyword() {
+		return Article_Keyword;
 	}
-	public void setKeyword(ArrayList<String> Keyword) {
-		this.Keyword = Keyword;
+	public void setArticle_Keyword(ArrayList<String> article_Keyword) {
+		Article_Keyword = article_Keyword;
 	}
+	
 }

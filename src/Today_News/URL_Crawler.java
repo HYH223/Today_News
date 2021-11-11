@@ -4,7 +4,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,6 +11,11 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+
+import kr.co.shineware.nlp.komoran.constant.DEFAULT_MODEL;
+import kr.co.shineware.nlp.komoran.core.Komoran;
+import kr.co.shineware.nlp.komoran.model.KomoranResult;
+import kr.co.shineware.nlp.komoran.model.Token;
 
 public class URL_Crawler{
 
@@ -26,22 +30,17 @@ public class URL_Crawler{
 	};
 		
 	
-	public ArrayList<Article_Class> select_sid2Num(int sid1, ArrayList<TextRank_Class> KeywordRank) throws Exception{
+	public ArrayList<Article_Class> select_sid2Num(int sid1, ArrayList<TextRank_Class> Keyword_List) throws Exception{
 		
-		
-		System.out.println("sid1-\t\t"+sid1);
+		System.out.println("sid1-\t\t"+sid1); //check Sid1
 		ArrayList<Article_Class> Article_ArrayList = new ArrayList<Article_Class>(); //return 될 sid2 1개 객체
 		
 		Article_Crawler article_crawler = new Article_Crawler();
-		for(int sid2_idx = 0; sid2_idx < sid2[sid1%100].length/*sid2_idx <1*/; sid2_idx++) { //sid2 loop
-			System.out.println("sid2-\t"+sid2[sid1%100][sid2_idx]);
-			
-//			System.out.println(/*sid2[sid1%100][sid2_idx]*/"252");
-//			int final_page_num = final_page(sid1,sid2[sid1%100][sid2_idx]/*"252"*/); //get Final Page number
-			
-			Page_loop: for(int page_num = 1; page_num < 2/*final_page_num*/; page_num++) { //Page loop
-//				System.out.println("["+page_num+"/"+final_page_num+"]");
-				
+		for(int sid2_idx = 0; sid2_idx < sid2[sid1%100].length; sid2_idx++) { //sid2 loop
+			System.out.println("sid2-\t"+sid2[sid1%100][sid2_idx]); //check Sid2
+			int final_page_num = final_page(sid1,sid2[sid1%100][sid2_idx]/*"252"*/); //get Final Page number
+			Page_loop: for(int page_num = 1; page_num < final_page_num; page_num++) { //Page loop
+				System.out.println("["+page_num+"/"+final_page_num+"]"); //check page/final page
 				
 				String URL = "https://news.naver.com/main/list.nhn?mode=LS2D&mid=shm&"
 						+ "sid2=" + sid2[sid1%100][sid2_idx]/*"252"*/
@@ -50,55 +49,43 @@ public class URL_Crawler{
 						+ "&page="+page_num;
 				
 				
-				Document doc = Jsoup.connect(URL).get();
+				Document doc = Jsoup.connect(URL).get(); //get page document
 				
-				Elements Article_List_URL = doc.select("div.content div.list_body ul li dl"); //Aticle URL
+				Elements Article_List_URL = doc.select("div.content div.list_body ul li dl"); //get Article list URL
 				
 				for(Element element : Article_List_URL) { //Article List loop
-
-//					LocalTime startTime = LocalTime.now();
 					
 					if(Check_Upload_Time(element.toString().split("<span class=\"date")[1].split(">")[1])) {break Page_loop; } //Upload Time > 1hour => break Page loop
 					Article_Class article_class = new Article_Class();	//sid2 하위 1개 기사
 					ArrayList<String> Article_Data = article_crawler.article_crawling(element.toString().split("href=\"")[1].split("\">")[0].replace("&amp;","&")); //Crawling to Article
-					article_class.setSid2(sid2[sid1%100][sid2_idx]/*"252"*/); //Store sid2
-					article_class.setURL(Article_Data.get(0)); //Store URL
-					article_class.setTitle(Article_Data.get(1)); //Store Title
-					System.out.println(sid2[sid1%100][sid2_idx]+"- "+Article_Data.get(1));
-					article_class.setTime(Article_Data.get(2)); //Store Time
-					try {
-						article_class.setContent(Article_Data.get(3)); //Store Content -> 3줄요약 class추가해서 해당 메소드로 content내용 수정해야함 -> Article_Crawler에서 완료
-					}catch(ArrayIndexOutOfBoundsException exception) {
-						System.out.println(Article_Data.get(3));
-						article_class.setContent("내용없음");
-					}catch(IndexOutOfBoundsException exception) {
-						article_class.setContent("내용없음");
+					if(!Article_Data.get(0).equals("Non")&&!Article_Data.get(1).equals("Non")&&!Article_Data.get(2).equals("Non")) { //Non-exception Data
+						
+						article_class.setArticle_Sidnum(Integer.toString(sid1)/*sid2[sid1%100][sid2_idx]*/); //Store Sidnum
+						article_class.setArticle_URL(Article_Data.get(0)); //Store URL
+						article_class.setArticle_Title(Article_Data.get(1)); //Store Title
+						System.out.println(sid2[sid1%100][sid2_idx]+"- "+Article_Data.get(1)); //check Sid2 + Title
+						article_class.setArticle_Time(Article_Data.get(2)); //Store Time
+						article_class.setArticle_Content(Article_Data.get(3)); //Store Content -> 3줄요약 class추가해서 해당 메소드로 content내용 수정해야함 -> Article_Crawler에서 완료
+						
+						//Keyword//
+						article_class.setArticle_Keyword(Keyword_Expect(article_class.getArticle_Title())); //Store Keyword
+						ArrayList<String> Title_Keywords = Keyword_Expect(article_class.getArticle_Title());
+						for(int keyword_Count=0; keyword_Count < Title_Keywords.size(); keyword_Count++) {
+							TextRanking(Keyword_List, Title_Keywords.get(keyword_Count)); //title keyword count
+						}
+						
+						Article_ArrayList.add(article_class); //add article_class from article_arraylist
+					}else {
+						System.out.println("Error - "+Article_Data.get(0));
 					}
-					Title_Analysis title_analysis = new Title_Analysis(); //Extract Keyword
-					article_class.setKeyword(title_analysis.Text_Analysis(article_class.getTitle())); //Store Keyword
 					
-					Save_File(article_class.getTitle(),sid2[sid1%100][sid2_idx]);
-					
-//					for(String keyword : title_analysis.Text_Analysis(article_class.getTitle())) {
-////						TextRank_Analysis textrank_analysis = new TextRank_Analysis();
-////						textrank_analysis.TextRanking(KeywordRank, keyword,sid2[sid1%100][sid2_idx]);
-//						for(TextRank_Class textrank_class : KeywordRank) {
-//							textrank_class.setKeyword(keyword);
-//							textrank_class.setSid2(sid2[sid1%100][sid2_idx]);
-//						}
-//					}
-					
-					Article_ArrayList.add(article_class); //add article_class from article_arraylist
-					
-
-//					LocalTime endTime = LocalTime.now();
-//					System.out.println(String.valueOf(endTime.getMinute()-startTime.getMinute())+"분"+String.valueOf(endTime.getSecond()-startTime.getSecond())+"초"+String.valueOf(endTime.getNano()-startTime.getNano())+"나노초");
 				}
 			}
 		}
 		return Article_ArrayList;
 	}
 	
+	//Method//
 	public int final_page(int sid1,String sid2) throws IOException { //get last Page number
 		
 		String URL = "https://news.naver.com/main/list.nhn?mode=LS2D&mid=shm&"
@@ -116,33 +103,53 @@ public class URL_Crawler{
 		else {return 2;}
 	}
 	
-	public void Save_File(String Content,String sid2) throws IOException{//Save Text to Article //No use
-		
-		File Article_Data_File = new File("Article_Data.txt");
-		
-		BufferedWriter filewriter = new BufferedWriter(new FileWriter(Article_Data_File,true));
-		
-		filewriter.write(sid2+"|"+Content);
-		filewriter.write("\n");
-		filewriter.flush();
-		filewriter.close();
-		
-	}
-	
-	public boolean Check_Upload_Time(String Upload_Time) { //6시간전 기사 확인
+	public boolean Check_Upload_Time(String Upload_Time) { //N시간전 기사 확인
 		
 		if(Upload_Time.contains("분")) {
-//			System.out.println("OK");
 			return false;
 		}
 		else if(Upload_Time.contains("시간")) {
 //			if(2>Integer.parseInt(Upload_Time.split("시간")[0])) {
-//				System.out.println("OK");
 //				return false;
 //			}
 			return true;
 		}
-//		System.out.println("NO");
 		return true;
 	}
+	
+	public void TextRanking(ArrayList<TextRank_Class> Keyword_List,String keyword) { //Keyword Back of Words
+		
+		boolean newKeyword=true;
+		
+		for(int i = 0; i < Keyword_List.size(); i++) { //compare keyword list to keyword
+				
+			if(Keyword_List.get(i).getKeyword().equals(keyword)) { //List's keyword
+				Keyword_List.get(i).addKeyword_Rank();
+				newKeyword = false;
+				break;
+			}
+		}
+		if(newKeyword) { //New Keyword
+			TextRank_Class textrank_class = new TextRank_Class(keyword);
+			Keyword_List.add(textrank_class);
+		}
+	}
+	
+	public ArrayList<String> Keyword_Expect(String Content_Text) { //Extract keyword from text
+		
+	    Komoran komoran = new Komoran(DEFAULT_MODEL.FULL); //Make KOMORAN Object of WiKi model
+	
+	    KomoranResult analyzeResultList = komoran.analyze(Content_Text); //Analysis Text -> return Keyword List
+	    List<Token> tokenList = analyzeResultList.getTokenList(); //Store Keywords to List
+	    ArrayList<String> keyWord = new ArrayList<String>();
+	    
+	    for (Token token : tokenList) { 
+	        if(token.getPos().equals("NNP")) { //Extract NNP(고유명사) keyword
+	        	if(token.getMorph().length()!=1) {
+	        		keyWord.add(token.getMorph()); //Append Keyword
+	        	}
+	        }        
+        }
+	    return keyWord;
+    }
 }

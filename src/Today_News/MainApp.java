@@ -1,10 +1,16 @@
 package Today_News;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.time.*;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLEncoder;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
 public class MainApp {
@@ -12,98 +18,114 @@ public class MainApp {
 	public static void main(String[] args) throws Exception {
 
 		int[] sid1 = {100,101,102,103,104,105}; //Sid1 value
-		LocalTime startTime = LocalTime.now();
-		System.out.println(startTime);
-		
-//		String URL = "https://news.naver.com/main/list.nhn?mode=LS2D&mid=shm&"
-//				+ "sid2=" + 263
-//				+ "&sid1=" + 101
-////				+ "&date="
-//				+ "&page="+1000000;
-		
-//		String URL = "https://news.naver.com/main/list.nhn?mode=LS2D&sid2=252&sid1=102&mid=shm&date=20210311&page=8";
-		
-//		System.out.println("URL :: " + URL);
+		MainApp mainApp = new MainApp();
 		
 		URL_Crawler url_crawler = new URL_Crawler(); //URL Crawler
 		
-		Mk_File(); //File initialization
-		
 		ArrayList<ArrayList<Article_Class>> Article = new ArrayList<ArrayList<Article_Class>>(); //News Data variable
-		ArrayList<TextRank_Class> TextRank = new ArrayList<TextRank_Class>();
+		ArrayList<TextRank_Class> Keyword_List = new ArrayList<TextRank_Class>();
 		
+		//Crawling//
 		for(int i=0;i<sid1.length;i++) { //Sending Sid1 values
-//			System.out.println(/*sid1[i]*/102);
-			Article.add(url_crawler.select_sid2Num(sid1[i]/*102*/, TextRank)); //Send Sid1 value
+			Article.add(url_crawler.select_sid2Num(sid1[i]/*102*/, Keyword_List)); //Send Sid1 value
 		}
 		
-		for(int a=0;a<Article.size();a++) {
-			for(int b=0;b<Article.get(a).size();b++) {
-				
-				System.out.println(Article.get(a).get(b).getTitle()+"\t"+Article.get(a).get(b).getSid2());
-			}
-		}
-		for(int a=0;a<TextRank.size();a++) {
-			if(TextRank.get(a).getKeyword_Rank()!=0) {
-				System.out.println(TextRank.get(a).getKeyword()+" "+" "+TextRank.get(a).getSid2());
-			}
-		}
-		LocalTime endTime = LocalTime.now();
-		System.out.println(String.valueOf(endTime.getMinute()-startTime.getMinute())+"분"+String.valueOf(endTime.getSecond()-startTime.getSecond())+"초");
-//		------------- Android쪽으로 넘겨주기 -------------
-			
-		//1. Document를 가져온다.
-//		Document doc = Jsoup.connect(URL).get();
+		//Reset DB//
+		mainApp.Delete_DBData("Article"); //Delete_Data
+		mainApp.Delete_DBData("Keyword_List"); //Delete_Data
+		mainApp.Delete_DBData("Keyword_Rank"); //Delete_Data
 		
-		//2. 목록을 가져온다.
-////		System.out.println("" + doc.toString());
-//		Elements elements_test = doc.select("div.content div.list_body ul li dl");
-//		Elements elements_nextPage = doc.select("div.content div.paging strong");
-//		Elements elements_article_text = doc.select("div.content div._article_body_contents");
-//		Elements elements_article_title = doc.select("div.content div.article_header div.article_info h3");
-//		Elements elements_article_time = doc.select("div.content div.article_header div.article_info div.sponsor span.t11");
-//		Elements elements_upload_time = doc.select("div.content div.list_body span.is_new");
-//		
-//		//3. 목록(배열)에서 정보를 가져온다.
-//		String delet_tag = "[<].*[>]";
-////		for(Element element : elements_article_text) {
-////			System.out.println(element.toString().replaceAll(delet_tag, "").replace("function _flash_removeCallback() {}", "").replace("// flash 오류를 우회하기 위한 함수 추가", ""));
-////		}
-//
-//		System.out.println(elements_article_title.toString().split("<h3 id=\"articleTitle\">")[1].split("</h3>")[0]);
-//		
-//		System.out.println(elements_article_time.toString().split("<span class=\"t11\">")[1].split("</span")[0]);
-//		
-//		
-//		System.out.println(elements_nextPage.toString().split("<strong>")[1].split("</strong>")[0]);
-//		for(Element element: elements_test) {
-			
-//			if(element.toString().split("<span class=\"date")[1].split(">")[1].split("전")[0].contains("시간")) {
-//				if(7>Integer.parseInt(element.toString().split("<span class=\"date")[1].split(">")[1].split("전")[0].split("시간")[0])) {
-//					System.out.println("OK");
-//				}
-//			}
-//			if(element.toString().split("<span class=\"date")[1].split(">")[1].contains("분")) {
-//				System.out.println("OK");
-//			}
-//			else if(element.toString().split("<span class=\"date")[1].split(">")[1].contains("시간")) {
-//				System.out.println(element.toString().split("<span class=\"date")[1].split(">")[1].split("시간")[0]);
-//				if(7>Integer.parseInt(element.toString().split("<span class=\"date")[1].split(">")[1].split("시간")[0])) {
-//					System.out.println("OK");
-//				}
-//			}
-//			else {System.out.println("Fail");}
-//			
-//		}
+		//Store DB//
+		for(int sid1_Count = 0; sid1_Count < Article.size(); sid1_Count++) {
+			for(int sid2_Count = 0; sid2_Count < Article.get(sid1_Count).size(); sid2_Count++) { //Insert_Article
+				mainApp.Insert_Article(Article.get(sid1_Count).get(sid2_Count).getArticle_Title(),Article.get(sid1_Count).get(sid2_Count).getArticle_Content(),Article.get(sid1_Count).get(sid2_Count).getArticle_Sidnum(),Article.get(sid1_Count).get(sid2_Count).getArticle_URL());
+				for(int Article_Keyword_Count = 0; Article_Keyword_Count < Article.get(sid1_Count).get(sid2_Count).Article_Keyword.size(); Article_Keyword_Count++) { //Insert_Keyword_List
+					mainApp.Insert_Keyword_List(Article.get(sid1_Count).get(sid2_Count).Article_Keyword.get(Article_Keyword_Count), Article.get(sid1_Count).get(sid2_Count).getArticle_Sidnum(), Article.get(sid1_Count).get(sid2_Count).getArticle_URL());
+				}
+			}
+		}
+		for(int Keyword_Count = 0; Keyword_Count < Keyword_List.size(); Keyword_Count++) { //Insert_Keyword_Rank
+			mainApp.Insert_Keyword_Rank(Keyword_List.get(Keyword_Count).Keyword_word,Keyword_List.get(Keyword_Count).Keyword_Count);
+		}
+		mainApp.Insert_Data_State();
 	}
 	
-	public static void Mk_File() throws IOException{ //File initialization //No use
+	//Method
+	public void Insert_Article(String Article_Title, String Article_Content, String Article_Sidnum, String Article_URL) { //Insert_Article
+		try {
+			URL url = new URL("http://todaynews.dothome.co.kr/Insert_Article.php" + "?" + URLEncoder.encode("Article_Title") + "=" + URLEncoder.encode(Article_Title,"UTF-8")+"&"+URLEncoder.encode("Article_Content") + "=" + URLEncoder.encode(Article_Content,"UTF-8")+"&"+URLEncoder.encode("Article_Sidnum") + "=" + URLEncoder.encode(Article_Sidnum,"UTF-8")+"&"+URLEncoder.encode("Article_URL") + "=" + URLEncoder.encode(Article_URL,"UTF-8"));
+			URLConnection connect = url.openConnection(); //url연결
+			connect.setUseCaches(false);
+			InputStream is = connect.getInputStream();
+			BufferedReader br = new BufferedReader(new InputStreamReader(is));
+	        br.close();
+	        
+		} catch (Exception e) {
+			System.out.println("Insert Error - Article");
+			System.out.println(Article_Title+Article_Content+Article_Sidnum+Article_URL);
+		}
+	}
+	
+	public void Insert_Keyword_List(String Keyword_Word, String Keyword_Sidnum, String Keyword_URL) { //Insert_Keyword_List
+		try {
+			URL url = new URL("http://todaynews.dothome.co.kr/Insert_Keyword_List.php" + "?" + URLEncoder.encode("Keyword_Word") + "=" + URLEncoder.encode(Keyword_Word,"UTF-8")+"&"+URLEncoder.encode("Keyword_Sidnum") + "=" + URLEncoder.encode(Keyword_Sidnum,"UTF-8")+"&"+URLEncoder.encode("Keyword_URL") + "=" + URLEncoder.encode(Keyword_URL,"UTF-8"));
+			URLConnection connect = url.openConnection(); //url연결
+			connect.setUseCaches(false);
+			InputStream is = connect.getInputStream();
+			BufferedReader br = new BufferedReader(new InputStreamReader(is));
+	        br.close();
+	        
+		} catch (Exception e) {
+			System.out.println("Insert Error - Keyword_List");
+			System.out.println(Keyword_Word+Keyword_Sidnum+Keyword_URL);
+		}
+	}
+	
 
-		File Article_Data_File = new File("Article_Data.txt");
-		
-		BufferedWriter filewriter = new BufferedWriter(new FileWriter(Article_Data_File));
-		
-		filewriter.close();
+	public void Insert_Keyword_Rank(String Keyword_Word, int Keyword_Count) { //Insert_Keyword_Rank
+		try {
+			URL url = new URL("http://todaynews.dothome.co.kr/Insert_Keyword_Rank.php" + "?" + URLEncoder.encode("Keyword_Word") + "=" + URLEncoder.encode(Keyword_Word,"UTF-8")+"&"+URLEncoder.encode("Keyword_Count") + "=" + Keyword_Count);
+			URLConnection connect = url.openConnection(); //url연결
+			connect.setUseCaches(false);
+			InputStream is = connect.getInputStream();
+			BufferedReader br = new BufferedReader(new InputStreamReader(is));
+	        br.close();
+	        
+		} catch (Exception e) {
+			System.out.println("Insert Error - Keyword_Rank");
+			System.out.println(Keyword_Word+Keyword_Count);
+		}
 	}
 	
+	public void Insert_Data_State() { //Insert_Data_State
+		DateTimeFormatter SQL_DateTime_Form = DateTimeFormatter.ofPattern("YYYY-MM-dd"+"%20"+"HH:MM:ss"); //MySQL DateTime pattern
+		LocalDateTime Data_Upload_DateTime = LocalDateTime.now();
+		try {
+			URL url = new URL("http://todaynews.dothome.co.kr/Insert_Data_State.php" + "?"+ URLEncoder.encode("Data_Upload_DateTime") + "=" + Data_Upload_DateTime.format(SQL_DateTime_Form).toString() + "&" + URLEncoder.encode("State_Code") + "=" + 0 );
+			URLConnection connect = url.openConnection(); //url연결
+			connect.setUseCaches(false);
+			InputStream is = connect.getInputStream();
+			BufferedReader br = new BufferedReader(new InputStreamReader(is));
+	        br.close();
+	        
+		}catch(Exception e) {
+			System.out.println("Insert Error - State_code");
+			System.out.println(Data_Upload_DateTime.format(SQL_DateTime_Form).toString());
+		}
+	}
+	
+	public void Delete_DBData(String Table_Name) { //Delete_Data
+		try {
+			URL url = new URL("http://todaynews.dothome.co.kr/Delete_DBData.php" + "?" + URLEncoder.encode("Table") + "=" + URLEncoder.encode(Table_Name));
+			URLConnection connect = url.openConnection(); //url연결
+			connect.setUseCaches(false);
+			InputStream is = connect.getInputStream();
+			BufferedReader br = new BufferedReader(new InputStreamReader(is));
+	        br.close();
+	        
+		}catch(Exception e) {
+			System.out.println("Delete Error - Article");
+			System.out.println(Table_Name);
+		}
+	}
 }
